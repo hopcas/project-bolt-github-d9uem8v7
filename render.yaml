@@ -1,0 +1,18 @@
+services:
+  - type: web
+    name: telegram-tts-bot
+    env: node
+    plan: free
+    buildCommand: npm install
+    startCommand: npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: TELEGRAM_BOT_TOKEN
+        sync: false
+      - key: TTS_API_URL
+        value: https://api.streamelements.com/kappa/v2/speech
+      - key: MAX_FILE_SIZE
+        value: 10485760
+      - key: MAX_TEXT_LENGTH
+        value: 5000

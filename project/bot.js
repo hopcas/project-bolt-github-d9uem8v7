@@ -1,0 +1,111 @@
+require('dotenv').config();
+const TelegramBot = require('node-telegram-bot-api');
+const MessageHandler = require('./handlers/messageHandler');
+const fs = require('fs');
+const path = require('path');
+
+// 验证必需的环境变量
+if (!process.env.TELEGRAM_BOT_TOKEN) {
+  console.error('❌ 错误: 请在 .env 文件中设置 TELEGRAM_BOT_TOKEN');
+  console.error('💡 提示: 从 @BotFather 获取 bot token 并添加到 .env 文件');
+  process.exit(1);
+}
+
+// 创建临时文件夹
+const tempDir = path.join(__dirname, 'temp');
+if (!fs.existsSync(tempDir)) {
+  fs.mkdirSync(tempDir, { recursive: true });
+  console.log('📁 创建临时文件夹:', tempDir);
+}
+
+// 创建bot实例
+const bot = new TelegramBot(process.env.TELEGRAM_BOT_TOKEN, { polling: true });
+const messageHandler = new MessageHandler(bot);
+
+console.log('🚀 Telegram 文本转语音机器人启动中...');
+
+// 错误处理
+bot.on('error', (error) => {
+  console.error('❌ Bot错误:', error.message);
+});
+
+bot.on('polling_error', (error) => {
+  console.error('❌ 轮询错误:', error.message);
+});
+
+// 消息处理器
+bot.onText(/\/start/, (msg) => {
+  console.log(`📝 收到 /start 命令 - 用户: ${msg.from.username || msg.from.first_name} (${msg.chat.id})`);
+  messageHandler.handleStart(msg);
+});
+
+bot.onText(/\/voice/, (msg) => {
+  console.log(`🎵 收到 /voice 命令 - 用户: ${msg.from.username || msg.from.first_name} (${msg.chat.id})`);
+  messageHandler.handleVoiceSelection(msg);
+});
+
+bot.onText(/\/help/, (msg) => {
+  console.log(`❓ 收到 /help 命令 - 用户: ${msg.from.username || msg.from.first_name} (${msg.chat.id})`);
+  messageHandler.handleHelp(msg);
+});
+
+// 文档处理
+bot.on('document', (msg) => {
+  console.log(`📄 收到文档 - 用户: ${msg.from.username || msg.from.first_name} (${msg.chat.id})`);
+  console.log(`📄 文件信息: ${msg.document.file_name} (${msg.document.file_size} bytes)`);
+  messageHandler.handleDocument(msg);
+});
+
+// 回调查询处理
+bot.on('callback_query', (callbackQuery) => {
+  console.log(`🔄 收到回调查询 - 数据: ${callbackQuery.data}`);
+  messageHandler.handleCallbackQuery(callbackQuery);
+});
+
+// 处理普通文本消息
+bot.on('message', (msg) => {
+  // 忽略命令和文档消息
+  if (msg.text && !msg.text.startsWith('/') && !msg.document) {
+    const chatId = msg.chat.id;
+    bot.sendMessage(chatId, 
+      '📝 请发送文本文件进行转换！\n\n' +
+      '💡 提示：直接上传 .txt、.md 或 .rtf 文件\n' +
+      '🎵 使用 /voice 选择语音语言\n' +
+      '❓ 使用 /help 获取详细帮助'
+    );
+  }
+});
+
+// 清理函数
+function cleanup() {
+  console.log('🧹 清理临时文件...');
+  try {
+    const files = fs.readdirSync(tempDir);
+    files.forEach(file => {
+      const filePath = path.join(tempDir, file);
+      fs.unlinkSync(filePath);
+      console.log(`🗑️ 删除临时文件: ${file}`);
+    });
+  } catch (error) {
+    console.error('清理错误:', error.message);
+  }
+}
+
+// 进程退出时清理
+process.on('SIGINT', () => {
+  console.log('\n⏹️ 机器人正在关闭...');
+  cleanup();
+  process.exit(0);
+});
+
+process.on('SIGTERM', () => {
+  console.log('\n⏹️ 机器人正在关闭...');
+  cleanup();
+  process.exit(0);
+});
+
+// 定期清理临时文件（每小时）
+setInterval(cleanup, 60 * 60 * 1000);
+
+console.log('✅ 文本转语音机器人已启动！');
+console.log('📱 开始接收消息...');
