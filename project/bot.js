@@ -19,8 +19,18 @@ if (!fs.existsSync(tempDir)) {
   console.log('📁 创建临时文件夹:', tempDir);
 }
 
-// 创建bot实例
-const bot = new TelegramBot(process.env.TELEGRAM_BOT_TOKEN, { polling: true });
+// 创建bot实例 - 使用更健壮的轮询配置
+const bot = new TelegramBot(process.env.TELEGRAM_BOT_TOKEN, {
+  polling: {
+    interval: 3000, // 轮询间隔（毫秒）
+    autoStart: true,
+    autoRestart: true, // 自动重启轮询
+    params: {
+      timeout: 60, // 超时时间（秒）
+      allowed_updates: ['message', 'callback_query'] // 只监听需要的更新类型
+    }
+  }
+});
 const messageHandler = new MessageHandler(bot);
 
 console.log('🚀 Telegram 文本转语音机器人启动中...');
@@ -31,10 +41,52 @@ const server = require('./server');
 // 错误处理
 bot.on('error', (error) => {
   console.error('❌ Bot错误:', error.message);
+  // 处理特定错误类型
+  if (error.code === 'ETELEGRAM' && error.response && error.response.body && error.response.body.error_code === 409) {
+    console.warn('⚠️ 检测到多个机器人实例运行。等待20秒后尝试重启轮询...');
+    setTimeout(() => {
+      try {
+        bot.stopPolling();
+        console.log('🔄 尝试重新启动轮询...');
+        bot.startPolling({
+          interval: 3000,
+          autoRestart: true,
+          params: {
+            timeout: 60,
+            allowed_updates: ['message', 'callback_query']
+          }
+        });
+        console.log('✅ 轮询重新启动成功');
+      } catch (err) {
+        console.error('❌ 重新启动轮询失败:', err.message);
+      }
+    }, 20000); // 等待20秒后再尝试重启
+  }
 });
 
 bot.on('polling_error', (error) => {
   console.error('❌ 轮询错误:', error.message);
+  // 处理409冲突错误
+  if (error.code === 'ETELEGRAM' && error.message.includes('409 Conflict')) {
+    console.warn('⚠️ 检测到多个机器人实例运行导致的轮询冲突。等待20秒后尝试重启轮询...');
+    setTimeout(() => {
+      try {
+        bot.stopPolling();
+        console.log('🔄 尝试重新启动轮询...');
+        bot.startPolling({
+          interval: 3000,
+          autoRestart: true,
+          params: {
+            timeout: 60,
+            allowed_updates: ['message', 'callback_query']
+          }
+        });
+        console.log('✅ 轮询重新启动成功');
+      } catch (err) {
+        console.error('❌ 重新启动轮询失败:', err.message);
+      }
+    }, 20000); // 等待20秒后再尝试重启
+  }
 });
 
 // 消息处理器
