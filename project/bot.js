@@ -25,6 +25,9 @@ const messageHandler = new MessageHandler(bot);
 
 console.log('🚀 Telegram 文本转语音机器人启动中...');
 
+// 启动健康检查服务器
+const server = require('./server');
+
 // 错误处理
 bot.on('error', (error) => {
   console.error('❌ Bot错误:', error.message);

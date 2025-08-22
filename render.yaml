@@ -6,6 +6,9 @@ services:
     rootDir: project
     buildCommand: npm install
     startCommand: npm start
+    autoDeploy: true
+    healthCheckPath: /health
+    healthCheckPort: 3000
     envVars:
       - key: NODE_ENV
         value: production
