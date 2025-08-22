@@ -6,7 +6,7 @@ const { ERROR_MESSAGES } = require('../config/constants');
 class TTSService {
   constructor() {
     // 使用更可靠的TTS API替代已不可用的Streamelements API
-    // 这里使用Google Text-to-Speech的公共端点示例
+    // 使用更稳定的Google TTS API配置
     this.apiUrl = process.env.TTS_API_URL || 'https://translate.google.com/translate_tts';
   }
   
@@ -15,47 +15,37 @@ class TTSService {
    */
   async convertTextToSpeech(text, voice = 'zh-CN', chatId) {
     try {
+      // 文本预处理 - 移除特殊字符和多余空格
+      let processedText = text.trim();
+      // 替换可能导致API问题的特殊字符
+      processedText = processedText.replace(/[\u200B-\u200D\uFEFF]/g, '');
       // 限制文本长度以避免API拒绝
-      const limitedText = text.length > 2000 ? text.substring(0, 2000) : text;
+      const limitedText = processedText.length > 1000 ? processedText.substring(0, 1000) : processedText;
       
-      // 准备API参数 - 根据不同API调整
-      let params, response;
+      // 准备API参数 - 使用Google TTS API的最新参数配置
+      console.log(`Converting text to speech for chat ${chatId} using Google TTS API...`);
       
-      // 判断当前使用的API类型
-      if (this.apiUrl.includes('translate.google.com')) {
-        // Google Translate TTS API参数
-        params = {
+      // 使用更可靠的参数和调用方式
+      const response = await axios.get(this.apiUrl, {
+        params: {
           ie: 'UTF-8',
           q: limitedText,
           tl: voice.split('-')[0], // 使用语言代码部分
-          client: 'tw-ob'
-        };
-        
-        console.log(`Converting text to speech for chat ${chatId} using Google TTS...`);
-        
-        response = await axios.get(this.apiUrl, {
-          params: params,
-          responseType: 'stream',
-          timeout: 30000, // 30秒超时
-          headers: {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
-          }
-        });
-      } else {
-        // 原始API调用方式，用于其他可能的TTS服务
-        params = {
-          voice: voice,
-          text: limitedText
-        };
-        
-        console.log(`Converting text to speech for chat ${chatId}...`);
-        
-        response = await axios.get(this.apiUrl, {
-          params: params,
-          responseType: 'stream',
-          timeout: 30000 // 30秒超时
-        });
-      }
+          client: 'tw-ob',
+          idx: '0',
+          total: '1',
+          textlen: limitedText.length
+        },
+        responseType: 'stream',
+        timeout: 30000, // 30秒超时
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/117.0.0.0 Safari/537.36',
+          'Accept': '*/*',
+          'Accept-Language': 'zh-CN,zh;q=0.9',
+          'Referer': 'https://translate.google.com/'
+        },
+        maxRedirects: 5
+      });
       
       // 生成临时文件名
       const fileName = `audio_${chatId}_${Date.now()}.mp3`;
@@ -85,12 +75,16 @@ class TTSService {
       
     } catch (error) {
       console.error('TTS conversion error:', error.message);
+      console.error('Error details:', error.response?.status, error.response?.data);
+      
       if (error.code === 'ECONNABORTED') {
         throw new Error('语音转换超时，请尝试较短的文本。');
       } else if (error.response && error.response.status === 400) {
         throw new Error('TTS服务参数错误，请尝试修改文本内容或稍后重试。');
       } else if (error.response && error.response.status === 429) {
         throw new Error('TTS服务请求过于频繁，请稍后重试。');
+      } else if (error.response && error.response.status === 403) {
+        throw new Error('TTS服务访问受限，请稍后重试。');
       }
       throw new Error(ERROR_MESSAGES.API_ERROR);
     }
