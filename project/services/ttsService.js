@@ -5,7 +5,9 @@ const { ERROR_MESSAGES } = require('../config/constants');
 
 class TTSService {
   constructor() {
-    this.apiUrl = process.env.TTS_API_URL || 'https://api.streamelements.com/kappa/v2/speech';
+    // 使用更可靠的TTS API替代已不可用的Streamelements API
+    // 这里使用Google Text-to-Speech的公共端点示例
+    this.apiUrl = process.env.TTS_API_URL || 'https://translate.google.com/translate_tts';
   }
   
   /**
@@ -13,18 +15,47 @@ class TTSService {
    */
   async convertTextToSpeech(text, voice = 'zh-CN', chatId) {
     try {
-      const params = {
-        voice: voice,
-        text: text
-      };
+      // 限制文本长度以避免API拒绝
+      const limitedText = text.length > 2000 ? text.substring(0, 2000) : text;
       
-      console.log(`Converting text to speech for chat ${chatId}...`);
+      // 准备API参数 - 根据不同API调整
+      let params, response;
       
-      const response = await axios.get(this.apiUrl, {
-        params: params,
-        responseType: 'stream',
-        timeout: 30000 // 30秒超时
-      });
+      // 判断当前使用的API类型
+      if (this.apiUrl.includes('translate.google.com')) {
+        // Google Translate TTS API参数
+        params = {
+          ie: 'UTF-8',
+          q: limitedText,
+          tl: voice.split('-')[0], // 使用语言代码部分
+          client: 'tw-ob'
+        };
+        
+        console.log(`Converting text to speech for chat ${chatId} using Google TTS...`);
+        
+        response = await axios.get(this.apiUrl, {
+          params: params,
+          responseType: 'stream',
+          timeout: 30000, // 30秒超时
+          headers: {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+          }
+        });
+      } else {
+        // 原始API调用方式，用于其他可能的TTS服务
+        params = {
+          voice: voice,
+          text: limitedText
+        };
+        
+        console.log(`Converting text to speech for chat ${chatId}...`);
+        
+        response = await axios.get(this.apiUrl, {
+          params: params,
+          responseType: 'stream',
+          timeout: 30000 // 30秒超时
+        });
+      }
       
       // 生成临时文件名
       const fileName = `audio_${chatId}_${Date.now()}.mp3`;
@@ -56,6 +87,10 @@ class TTSService {
       console.error('TTS conversion error:', error.message);
       if (error.code === 'ECONNABORTED') {
         throw new Error('语音转换超时，请尝试较短的文本。');
+      } else if (error.response && error.response.status === 400) {
+        throw new Error('TTS服务参数错误，请尝试修改文本内容或稍后重试。');
+      } else if (error.response && error.response.status === 429) {
+        throw new Error('TTS服务请求过于频繁，请稍后重试。');
       }
       throw new Error(ERROR_MESSAGES.API_ERROR);
     }

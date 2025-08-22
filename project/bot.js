@@ -6,8 +6,9 @@ const path = require('path');
 
 // 验证必需的环境变量
 if (!process.env.TELEGRAM_BOT_TOKEN) {
-  console.error('❌ 错误: 请在 .env 文件中设置 TELEGRAM_BOT_TOKEN');
-  console.error('💡 提示: 从 @BotFather 获取 bot token 并添加到 .env 文件');
+  console.error('❌ 错误: 未设置 TELEGRAM_BOT_TOKEN 环境变量');
+  console.error('💡 提示: 请从 @BotFather 获取 bot token，并在 Render 仪表板中将其设置为 Secret');
+  console.error('💡 提示: 配置路径: Render 仪表板 > 您的服务 > Environment > Add Secret');
   process.exit(1);
 }
 

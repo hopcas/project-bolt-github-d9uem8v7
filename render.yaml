@@ -10,9 +10,10 @@ services:
       - key: NODE_ENV
         value: production
       - key: TELEGRAM_BOT_TOKEN
+        description: '从@BotFather获取的Telegram机器人令牌，必须在Render仪表板中手动设置为Secret'
         sync: false
       - key: TTS_API_URL
-        value: https://api.streamelements.com/kappa/v2/speech
+        value: https://translate.google.com/translate_tts
       - key: MAX_FILE_SIZE
         value: 10485760
       - key: MAX_TEXT_LENGTH
