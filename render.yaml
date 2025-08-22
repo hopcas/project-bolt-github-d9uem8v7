@@ -3,6 +3,7 @@ services:
     name: telegram-tts-bot
     env: node
     plan: free
+    rootDir: project
     buildCommand: npm install
     startCommand: npm start
     envVars:
