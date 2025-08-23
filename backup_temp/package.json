@@ -1,0 +1,24 @@
+{
+  "name": "telegram-tts-bot-deployment",
+  "version": "1.0.0",
+  "description": "Deployment configuration for Telegram TTS Bot",
+  "main": "bot.js",
+  "private": true,
+  "scripts": {
+    "start": "node bot.js",
+    "dev": "node bot.js",
+    "build": "npm install",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "engines": {
+    "node": ">=16.0.0",
+    "npm": ">=8.0.0"
+  },
+  "dependencies": {
+    "node-telegram-bot-api": "^0.66.0",
+    "axios": "^1.6.2",
+    "form-data": "^4.0.0",
+    "dotenv": "^16.3.1",
+    "express": "^4.19.2"
+  }
+}
