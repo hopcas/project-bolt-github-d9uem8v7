@@ -1,0 +1,24 @@
+services:
+  - type: web_service
+    name: telegram-tts-bot
+    env: node
+    plan: free
+    rootDir: project
+    buildCommand: npm install
+    startCommand: npm start
+    autoDeploy: true
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: TELEGRAM_BOT_TOKEN
+        description: '从@BotFather获取的Telegram机器人令牌，必须在Render仪表板中手动设置为Secret'
+        sync: false
+      - key: TTS_API_URL
+        value: https://translate.google.com/translate_tts
+      - key: MAX_FILE_SIZE
+        value: 10485760
+      - key: MAX_TEXT_LENGTH
+        value: 5000
+      - key: PORT
+        value: 3000
