@@ -29,7 +29,7 @@ class TTSService {
       // 限制文本长度以避免API拒绝，Google TTS通常对单次请求有更严格的长度限制
       const limitedText = processedText.length > 500 ? processedText.substring(0, 500) : processedText;
       
-      // 准备API参数 - 使用Google TTS API的最新参数配置
+      // 准备API参数 - 更新为Google TTS API的最新参数配置
       console.log(`Converting text to speech for chat ${chatId} using Google TTS API...`);
       
       // 增强文本预处理，更严格地过滤可能导致API拒绝的字符
@@ -50,17 +50,18 @@ class TTSService {
       
       console.log(`Processed text length: ${safeText.length}, first 50 chars: ${safeText.substring(0, 50)}...`);
       
-      // 使用更可靠的参数和调用方式
+      // 更新API参数配置，使用更可靠的调用方式
+      // 更健壮的API参数配置
       const response = await axios.get(this.apiUrl, {
         params: {
           ie: 'UTF-8',
           q: safeText,
           tl: voice.split('-')[0] || 'zh', // 确保有默认语言代码
-          client: 'dict-chrome-ex', // 更新为更稳定的客户端类型
+          client: 'dict-chrome-ex', // 使用稳定的客户端类型
           idx: '0',
           total: '1',
           textlen: safeText.length,
-          tk: Math.floor(Math.random() * 99999999) // 添加一个随机token以避免API限制
+          tk: Math.floor(Math.random() * 99999999) // 随机token以避免API限制
         },
         responseType: 'stream',
         timeout: 30000, // 30秒超时
